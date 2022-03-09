@@ -4,9 +4,9 @@ This is an update of the code for the Blog Post: [Hyper-Scale Machine Learning w
 
 This was built and tested using a macOS and Ubuntu system:
 * Python 3.9
-* TensorFlow 2.7.0
+* TensorFlow 2.8.0
 * TensorBoard 2.8.0 (>=2.8.0, as S3 support is added via TF IO: https://github.com/tensorflow/tensorboard/issues/5480)
-* minio-py 7.1.2
+* minio-py 7.1.4
 * and all the depencies in the 'requirements.txt'
 
 ### How to use it

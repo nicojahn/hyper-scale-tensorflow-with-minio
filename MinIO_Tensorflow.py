@@ -27,6 +27,12 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 S3_USE_HTTPS = bool(int(os.getenv("S3_USE_HTTPS")))
 DATASET_BUCKET = os.getenv("DATASET_BUCKET")
 
+# Workaround for https://github.com/minio/minio-py/issues/1140
+if S3_ENDPOINT.startswith("http://") or S3_ENDPOINT.startswith("https://"):
+    import re
+
+    S3_ENDPOINT = re.sub(r"^https?://", "", S3_ENDPOINT)
+
 minioClient = Minio(
     S3_ENDPOINT,
     access_key=AWS_ACCESS_KEY_ID,
@@ -41,7 +47,7 @@ except InvalidResponseError as err:  # pylint: disable=W0621
 
 extract_folder = f"/tmp/{DATASET_BUCKET}/"
 
-with tarfile.open("/tmp/dataset.tar.gz", "r:gz") as tar:
+with tarfile.open("/tmp/dataset.tar.gz", "r:gz") as tar:  # pylint: disable=W1514
     tar.extractall(path=extract_folder)
 
 # Pre-Processing
@@ -61,7 +67,8 @@ for dir_name in dirs_to_read:
     dataset = parts[1]
     label = parts[2]
     for filename in os.listdir(os.path.join(extract_folder, dir_name)):
-        with open(os.path.join(extract_folder, dir_name, filename), "r") as f:
+        filepath = os.path.join(extract_folder, dir_name, filename)
+        with open(filepath, "r") as f:  # pylint: disable=W1514
             content = f.read()
             if dataset == "train":
                 train.append({"text": content, "label": label})
@@ -132,7 +139,7 @@ def process_examples(records, prefix=""):
             counter = 0
             file_counter += 1
             file_name = f"{prefix}_file{file_counter}.tfrecord"
-            with open(file_name, "w+") as file:
+            with open(file_name, "w+") as file:  # pylint: disable=W1514
                 with tf.io.TFRecordWriter(file.name) as writer:
                     for example in buffer:
                         writer.write(example.SerializeToString())
@@ -152,7 +159,7 @@ def process_examples(records, prefix=""):
     if len(buffer) > 0:
         file_counter += 1
         file_name = f"{prefix}_file{file_counter}.tfrecord"
-        with open(file_name, "w+") as file:
+        with open(file_name, "w+") as file:  # pylint: disable=W1514
             with tf.io.TFRecordWriter(file.name) as writer:
                 for example in buffer:
                     writer.write(example.SerializeToString())
@@ -197,6 +204,9 @@ if total_train_data_files == len(all_training_filenames):
     total_train_data_files -= 1
 training_files = all_training_filenames[0:total_train_data_files]
 validation_files = all_training_filenames[total_train_data_files:]
+
+assert len(training_files) > 0
+assert len(validation_files) > 0
 
 # Due to an uncatched TypeError caused by urllib3(==1.26.8) on exit, we call 'del' explicitly
 # Exception ignored in: <function Minio.__del__ at 0x15e67cca0>
